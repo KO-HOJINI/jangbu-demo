@@ -1,0 +1,804 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo',
+    sans-serif;
+
+  /*
+   * 화면 글씨 크기 템플릿 다섯 가지. 화면에는 이것만 쓴다 (15px 아래로 내리지 않는다).
+   * 명세표·견적서 A4 양식은 인쇄 규격이라 따로 정한 크기를 쓴다.
+   *   text-caption  15px  칸 이름, 배지, 보조 설명, 표 안 글씨
+   *   text-body     16px  본문, 입력 칸, 버튼
+   *   text-lead     18px  카드 제목, 강조 금액
+   *   text-title    20px  화면 제목
+   *   text-display  24px  합계 같은 큰 숫자
+   */
+  --text-caption: 0.9375rem;
+  --text-caption--line-height: 1.45;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.45;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.4;
+  --text-display: 1.5rem;
+  --text-display--line-height: 1.3;
+}
+
+html {
+  color-scheme: light;
+}
+
+/*
+ * 움직임 곡선은 이 셋만 쓴다 (review-animations 스킬의 기준 값).
+ *   --ease-out     나타나고 사라지는 것 — 처음에 빨라 누른 즉시 반응하는 느낌
+ *   --ease-in-out  화면 안에서 자리를 옮기는 것 (고른 칸 표시)
+ *   --ease-drawer  아래에서 올라오는 창
+ */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+ * 스크롤 막대는 긴 화면에만 생긴다. 그대로 두면 화면을 옮길 때 내용이 막대 폭(15px)만큼 좌우로 흔들린다.
+ * 예전에는 막대 자리를 늘 비워 두었는데(scrollbar-gutter), 스크롤이 없는 화면에서 오른쪽이 비고
+ * 메뉴 줄이 잘려 보였다. 그래서 자리는 비우지 않고, 내용 상자만 늘 같은 자리에 오게 여백으로 맞춘다.
+ *   왼쪽  = 막대 폭 (늘)
+ *   오른쪽 = 막대 폭 − 지금 막대가 차지한 폭 (막대가 없으면 막대 폭, 있으면 0)
+ * 이러면 막대가 있든 없든 내용은 창 한가운데 같은 폭이고, 메뉴 줄 바탕은 창 끝까지 간다.
+ * 두 값은 main.tsx 가 재서 넣는다 (휴대폰은 막대가 자리를 차지하지 않아 둘 다 0).
+ */
+@media screen {
+  .gutter-balance {
+    padding-right: calc(var(--scrollbar-width, 0px) - var(--scrollbar-now, 0px));
+    padding-left: var(--scrollbar-width, 0px);
+  }
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 antialiased;
+}
+
+html {
+  /* 휴대폰: 누를 때 뜨는 회색 네모를 없애고, 두 번 눌러 확대되는 것을 막아 단추가 바로 먹게 한다 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── 메뉴 ───────────────────────────────────────────────────────────────
+ * PC 는 화면 맨 위에 붙은 줄, 휴대폰은 화면 아래에 떠 있는 바 (엄지가 닿는 자리).
+ * 휴대폰에서 글자를 적는 동안에는 자판 위로 올라와 칸을 가리므로 아래로 내려 숨긴다 (.is-away).
+ */
+.app-nav {
+  @apply sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur;
+}
+
+@media (max-width: 1023px) {
+  .app-nav {
+    /* 바 전체가 알약 모양. 안쪽 여백(App.tsx 의 p-[5px])만큼 띄워 고른 칸 표시가 가장자리에 닿지 않게 한다 */
+    @apply fixed top-auto rounded-full border bg-white/95 shadow-lg shadow-slate-900/15 backdrop-blur-md;
+    right: 0.5rem;
+    left: 0.5rem;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-right: 0;
+    padding-left: 0;
+    transition:
+      translate 240ms var(--ease-out),
+      opacity 240ms var(--ease-out);
+  }
+
+  /* 지금 메뉴 표시: 바와 같은 모양(알약)의 진한 칸에 흰 글자 (App.tsx 의 Tab). 바 안쪽 여백이 사방으로 띄워 준다 */
+  .app-nav .nav-marker {
+    @apply rounded-full;
+  }
+
+  .app-nav.is-away {
+    translate: 0 150%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 떠 있는 메뉴가 맨 아래 내용을 가리지 않게 그 높이만큼 비운다 */
+  .app-main {
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+}
+
+/*
+ * 지금 고른 칸 뒤에 깔리는 표시 — 다른 칸을 고르면 그 자리로 미끄러져 간다 (자리는 lib/useMarker.ts 가 잰다).
+ *   nav-marker  메뉴의 검은 상자
+ *   seg-marker  대시보드 기간 단추·설정 탭 같은 회색 바 안의 흰 상자
+ */
+.nav-marker,
+.seg-marker {
+  @apply pointer-events-none absolute top-0 left-0;
+  /* 하루에도 여러 번 누르는 자리라 짧게. 칸마다 폭이 달라 폭도 같이 바뀐다 (둥근 모서리 때문에 scale 로는 못 한다) */
+  transition:
+    translate 220ms var(--ease-in-out),
+    width 220ms var(--ease-in-out);
+}
+
+.nav-marker {
+  @apply rounded-xl bg-slate-900;
+}
+
+/*
+ * 메뉴에 마우스를 올리면 옅은 회색이 깔리는데, 누른 뒤에도 그 색이 서서히 빠지면
+ * 미끄러져 오는 검은 상자와 겹쳐 두 상자가 같이 보였다. 누른 메뉴는 회색을 바로 걷고 글자색만 바꾼다.
+ */
+.app-nav a[aria-current='page'] {
+  background-color: transparent;
+  transition: color 150ms var(--ease-out);
+}
+
+.seg-marker {
+  @apply rounded-lg bg-white shadow-xs;
+}
+
+/*
+ * 휴대폰: 아래에 떠 있는 메뉴가 이미 알약 모양이라, 화면 안의 탭·기간 줄까지 상자로 칠하면 겹쳐 보인다.
+ * 고른 칸은 줄 아래 테두리 위에 얹은 진한 밑줄로 표시한다 (자리는 같은 useMarker 가 재므로 높이만 덮어쓴다).
+ */
+@media (max-width: 1023px) {
+  .seg-marker {
+    @apply rounded-none bg-slate-900 shadow-none;
+    top: auto;
+    bottom: -1px;
+    height: 2px !important;
+  }
+}
+
+/* ── 움직임 ─────────────────────────────────────────────────────────────
+ * 무엇이 바뀌었는지 눈이 따라가게 하는 짧은 움직임만 쓴다 (300ms 아래, 자리·투명도만 움직인다).
+ *   anim-page    메뉴를 옮겨 화면이 바뀔 때 — 화면 전체는 짧게 나타나기만 하고, 그 안의 상자가 올라온다 (아래 rise)
+ *   anim-reveal  상자·안내가 그 자리에 새로 나타날 때
+ *   anim-overlay 창 뒤의 어두운 바탕
+ *   anim-sheet   화면 가운데 뜨는 창 — 조금 작았다가 제 크기로. 닫을 때는 다시 작아지며 사라진다 (is-leaving)
+ *   anim-drawer  휴대폰에서 아래에 붙어 올라오는 창 (넓은 화면에서는 가운데 창과 같다). 닫을 때는 온 길로 나간다 (is-leaving)
+ *   toast        화면 아래 알림 — 올라왔다가 같은 쪽으로 내려간다 (components/Toaster.tsx)
+ *   fold         접었다 펴는 상자 (components/Fold.tsx)
+ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes drawer-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* 자리와 길이를 transform 으로만 바꾼다 (left·width 는 움직일 때마다 배치를 다시 계산한다) */
+@keyframes mutation-progress {
+  0% {
+    transform: translateX(-40%) scaleX(0.4);
+  }
+  50% {
+    transform: translateX(20%) scaleX(0.6);
+  }
+  100% {
+    transform: translateX(100%) scaleX(0.4);
+  }
+}
+
+.anim-page {
+  animation: fade-in 150ms var(--ease-out);
+}
+
+/*
+ * 메뉴를 눌러 화면을 옮길 때 (2026-10-05 사용자 지적: 앞 화면의 상자가 갑자기 사라져 어색하다):
+ *   앞 화면이 200ms 동안 흐려지는 사이 다음 화면이 그 위로 나타난다 — 빈 화면이 끼지 않는다.
+ *   자리 이동은 없다. 하루에도 여러 번 누르는 자리라 겹쳐 넘어가기만 하고, 올라오는 것은 다음 화면의 상자가 맡는다.
+ *   겹쳐 넘어가기를 쓸 수 있는 브라우저에서는 anim-page 가 따로 나타나지 않는다 (두 번 흐려지면 가운데가 비어 깜박인다).
+ *   넘어가는 동안만 끄면 끝나는 순간 anim-page 가 뒤늦게 돌아 한 번 더 깜박이므로, 쓸 수 있는지로 가른다.
+ */
+::view-transition-old(root) {
+  animation: fade-out 200ms var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: fade-in 200ms var(--ease-out) both;
+}
+
+@supports (view-transition-name: none) {
+  .anim-page {
+    animation: none;
+  }
+}
+
+.anim-mutation-progress {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  animation: mutation-progress 1.2s var(--ease-in-out) infinite;
+}
+
+.anim-reveal {
+  animation: reveal 200ms var(--ease-out);
+}
+
+.anim-overlay {
+  animation: fade-in 180ms var(--ease-out);
+}
+
+/*
+ * 화면의 상자가 나타날 때 (2026-10-05 사용자 요청: 모든 화면에서, 받아 둔 내용으로 다시 열 때도):
+ *   화면 안의 흰 상자(둥근 모서리 + 테두리)는 조금 아래에서 올라오며 나타난다. 같은 묶음 안에서는 앞에서부터
+ *   35ms 간격으로, 일곱째부터는 같이 (긴 목록이 끝없이 늦어지지 않게). 상자 안의 상자는 바깥 상자와 같이 움직인다.
+ *   상자가 화면에 새로 그려질 때 한 번 돈다 — 메뉴를 옮길 때, 불러오기가 끝났을 때, 목록에 줄이 새로 생겼을 때.
+ *   내용만 바뀌는 것(기간을 바꿈, 저장 뒤 다시 불러옴)은 상자가 그대로라 움직이지 않는다.
+ *   :where 로 써서 다른 움직임(anim-reveal 등)을 준 상자는 그쪽이 이긴다.
+ * 통계 화면은 묶음이 셋이라 차례를 이어 준다:
+ *   dash-group 의 상자들이 왼쪽 위부터 40ms 간격으로 (--base 는 앞 묶음의 상자 수),
+ *   dash-bar 막대는 상자가 자리 잡은 뒤 왼쪽에서 제 길이까지 자란다 — 길이가 곧 값이라 자라는 모습이 비교를 돕는다.
+ * 거래명세표·견적서는 흰 상자가 하나뿐이라 그것만 움직이면 어색하다 (2026-10-05 사용자 지적):
+ *   A4 양식을 감싼 틀(statement-print-area)이 상자 다음 차례로 같이 올라온다. 양식 자체는 건드리지 않는다.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+@keyframes grow-x {
+  from {
+    scale: 0 1;
+  }
+}
+
+:where(.app-main) :where(.rounded-2xl.border):where(:not(.rounded-2xl.border .rounded-2xl.border)) {
+  animation: rise 260ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+:where(.app-main) :where(.rounded-2xl.border):nth-child(2) { --i: 1; }
+:where(.app-main) :where(.rounded-2xl.border):nth-child(3) { --i: 2; }
+:where(.app-main) :where(.rounded-2xl.border):nth-child(4) { --i: 3; }
+:where(.app-main) :where(.rounded-2xl.border):nth-child(5) { --i: 4; }
+:where(.app-main) :where(.rounded-2xl.border):nth-child(6) { --i: 5; }
+:where(.app-main) :where(.rounded-2xl.border):nth-child(n + 7) { --i: 6; }
+
+.dash-group > * {
+  animation: rise 280ms var(--ease-out) backwards;
+  animation-delay: calc((var(--base, 0) + var(--i, 0)) * 40ms);
+}
+
+:where(.app-main) .statement-print-area {
+  animation: rise 300ms var(--ease-out) 70ms backwards;
+}
+
+.dash-bar {
+  transform-origin: left;
+  animation: grow-x 600ms var(--ease-out) 320ms backwards;
+}
+
+@media print {
+  :where(.app-main) :where(.rounded-2xl.border),
+  :where(.app-main) .statement-print-area,
+  .dash-group > *,
+  .dash-bar {
+    animation: none;
+  }
+}
+
+.anim-overlay.is-leaving {
+  animation: fade-out 160ms var(--ease-out) forwards;
+}
+
+.anim-sheet,
+.anim-drawer {
+  animation: sheet-in 200ms var(--ease-out);
+}
+
+.is-leaving > .anim-sheet,
+.is-leaving > .anim-drawer {
+  animation: sheet-out 160ms var(--ease-out) forwards;
+}
+
+@media (max-width: 639px) {
+  .anim-drawer {
+    animation: drawer-in 320ms var(--ease-drawer);
+  }
+
+  .is-leaving > .anim-drawer {
+    animation: drawer-out 200ms var(--ease-out) forwards;
+  }
+}
+
+/* 알림: 나타날 때와 사라질 때 같은 길로. 이어서 오면 멈추지 않고 그 자리에서 이어진다 (keyframes 가 아니라 transition) */
+.toast {
+  opacity: 0;
+  translate: 0 100%;
+  transition:
+    opacity 200ms var(--ease-out),
+    translate 200ms var(--ease-out);
+}
+
+.toast.is-open {
+  opacity: 1;
+  translate: 0 0;
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 100%;
+  }
+}
+
+/* 높이를 0 에서 내용 높이까지 늘인다 (grid 의 0fr → 1fr). 접힌 동안은 안의 칸이 눌리지도 읽히지도 않게 숨긴다 */
+.fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows 240ms var(--ease-out),
+    visibility 240ms;
+}
+
+.fold.is-open {
+  grid-template-rows: 1fr;
+  visibility: visible;
+}
+
+.fold.is-open > * {
+  opacity: 1;
+}
+
+/* 넘치는 것을 잘라야 접히는데, 그러면 칸을 눌렀을 때 생기는 테두리 빛도 잘린다 — 옆으로 4px 여유를 둔다 */
+.fold > * {
+  min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+
+@media (min-width: 1024px) {
+  .fold.lg-open {
+    grid-template-rows: 1fr;
+    visibility: visible;
+  }
+
+  .fold.lg-open > * {
+    opacity: 1;
+  }
+}
+
+/* 단추를 누르면 살짝 들어간다. 색 바뀜도 부드럽게. base 층이라 화면마다 따로 준 transition 이 있으면 그쪽이 이긴다 */
+@layer base {
+  :where(button, .tap) {
+    transition:
+      scale 160ms var(--ease-out),
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      opacity 150ms ease;
+  }
+
+  :where(button, .tap):not(:disabled):active {
+    scale: 0.97;
+  }
+}
+
+/*
+ * 손가락으로 누르는 기기: 글자뿐인 링크(현장 이름, 「등록하기」)와 체크 칸은 높이가 22~24px 라 누르기 어려웠다.
+ * 보이는 모양은 그대로 두고 누르는 자리만 44px 로 넓힌다. base 층이라 화면에서 따로 준 모양이 있으면 그쪽이 이긴다.
+ */
+@media (pointer: coarse) {
+  @layer base {
+    main a:not(.tap, .statement-sheet *) {
+      position: relative;
+    }
+
+    main a:not(.tap, .statement-sheet *)::after {
+      position: absolute;
+      inset: -10px -6px;
+      content: '';
+    }
+
+    label:has(> input[type='checkbox']) {
+      min-height: 44px;
+    }
+  }
+}
+
+/*
+ * 밀어야 나머지가 보이는 상자 (components/ScrollBox.tsx): 잘려서 안 보이는 쪽 가장자리에 옅은 그림자가 져서
+ * 내용이 그 밑으로 들어가 있다는 것을 알린다. 끝까지 밀면 그쪽 그림자는 사라진다.
+ *   scroll-box   바깥 상자 — 밀리지 않고, 그림자를 내용 위에 덮어 그린다
+ *   scroll-hint  안쪽의 미는 칸
+ * 그림자는 겹 두 장이다: ::before 가 앞쪽(왼쪽·위), ::after 가 뒤쪽(오른쪽·아래). lib/scrollHints.ts 가 바깥 상자에
+ *   --scroll-x / --scroll-y    옆으로 / 아래로 밀리는 상자인가 (0 또는 1) — 어느 변에 그릴지
+ *   --scroll-head              위에 붙어 있는 머리줄의 높이 (표가 직접 준다, 예: [--scroll-head:44px]) — 위쪽 그림자가 머리줄 밑에서 시작한다
+ *   --more-start / --more-end  앞쪽 / 뒤쪽이 얼마나 잘렸는가 (0~1, 끝에 가까울수록 작다) — 겹의 투명도
+ * 를 넣는다. 예전에는 상자 자체를 가장자리에서 흐리게(mask) 했는데, 테두리와 줄까지 같이 바래서 어색했다.
+ */
+.scroll-box {
+  position: relative;
+  /* 둥근 모서리 밖으로 그림자가 삐져나오지 않게 */
+  overflow: hidden;
+  --scroll-x: 0;
+  --scroll-y: 0;
+  --more-start: 0;
+  --more-end: 0;
+  /* 가장자리에서 짙고 안쪽으로 빨리 옅어지는 그림자 (slate-900) */
+  --edge-x: rgb(15 23 42 / calc(0.13 * var(--scroll-x))), rgb(15 23 42 / calc(0.04 * var(--scroll-x))) 40%, transparent;
+  --edge-y: rgb(15 23 42 / calc(0.13 * var(--scroll-y))), rgb(15 23 42 / calc(0.04 * var(--scroll-y))) 40%, transparent;
+}
+
+.scroll-box::before,
+.scroll-box::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: '';
+  /* 짙기는 미는 만큼 바로 따라간다 (끝에 가까울수록 옅게) — 따로 시간을 두면 손보다 늦게 따라온다 */
+  /* 그림자 띠의 양 끝은 뚝 잘리지 않고 스며들듯 사라진다: 옆으로 미는 상자는 띠의 위·아래 끝, 아래로 미는 상자는 왼쪽·오른쪽 끝.
+     밀리지 않는 방향은 길이가 0 이 되어 아무것도 가리지 않는다 */
+  /* 띠 길이의 40% 에 걸쳐 넓게 흐려진다. 맨 끝은 그림자가 아예 없고, 처음 절반은 아주 옅게 시작한다 */
+  --taper-x: calc(40% * var(--scroll-x));
+  --taper-y: calc(40% * var(--scroll-y));
+  mask-image:
+    linear-gradient(
+      to bottom,
+      transparent,
+      rgb(0 0 0 / 0.3) calc(var(--taper-x) / 2),
+      #000 var(--taper-x),
+      #000 calc(100% - var(--taper-x)),
+      rgb(0 0 0 / 0.3) calc(100% - var(--taper-x) / 2),
+      transparent
+    ),
+    linear-gradient(
+      to right,
+      transparent,
+      rgb(0 0 0 / 0.3) calc(var(--taper-y) / 2),
+      #000 var(--taper-y),
+      #000 calc(100% - var(--taper-y)),
+      rgb(0 0 0 / 0.3) calc(100% - var(--taper-y) / 2),
+      transparent
+    );
+  mask-composite: intersect;
+}
+
+.scroll-box::before {
+  background:
+    linear-gradient(to right, var(--edge-x)) left / 22px 100% no-repeat,
+    linear-gradient(to bottom, var(--edge-y)) 0 var(--scroll-head, 0px) / 100% 22px no-repeat;
+  opacity: var(--more-start);
+}
+
+.scroll-box::after {
+  background:
+    linear-gradient(to left, var(--edge-x)) right / 22px 100% no-repeat,
+    linear-gradient(to top, var(--edge-y)) bottom / 100% 22px no-repeat;
+  opacity: var(--more-end);
+}
+
+.scroll-hint {
+  /* 안에 든 화면 밖 요소(sr-only 는 absolute)가 이 칸을 기준으로 잡혀 같이 잘리게 한다.
+     없으면 표 오른쪽 끝의 그런 요소가 칸을 뚫고 나가 화면 전체가 옆으로 밀렸다 */
+  position: relative;
+  /* 안의 z-index 가 그림자 위로 올라오지 않게 한 겹으로 묶는다 */
+  isolation: isolate;
+}
+
+/* 표에 붙은 가로 스크롤 막대 — 바탕을 표 머리줄·합계줄(slate-50)과 같은 색으로.
+   바탕만 따로 바꿀 수는 없어서 막대는 윈도우 기본 회색을 그대로 적는다 */
+.table-scrollbar {
+  scrollbar-color: #8b8b8b var(--color-slate-50);
+}
+
+@media print {
+  .scroll-box {
+    overflow: visible;
+  }
+
+  .scroll-box::before,
+  .scroll-box::after {
+    content: none;
+  }
+}
+
+/*
+ * 기기에서 「동작 줄이기」를 켠 경우: 자리 이동과 크기 변화는 빼고, 나타나고 사라지는 것(투명도)과 색 바뀜만 남긴다.
+ * 전부 꺼 버리면 창이 뚝 나타나 오히려 놀라고, 불러오는 표시도 멈춘 것처럼 보인다.
+ */
+@media (prefers-reduced-motion: reduce) {
+  /* 자리 이동과 자라는 막대는 빼고 나타나기만 */
+  :where(.app-main) :where(.rounded-2xl.border),
+  :where(.app-main) .statement-print-area,
+  .dash-group > * {
+    animation-name: fade-in;
+  }
+
+  .dash-bar {
+    animation: none;
+  }
+
+  .anim-reveal,
+  .anim-sheet,
+  .anim-drawer {
+    animation: fade-in 150ms var(--ease-out);
+  }
+
+  .is-leaving > .anim-sheet,
+  .is-leaving > .anim-drawer {
+    animation: fade-out 150ms var(--ease-out) forwards;
+  }
+
+  .toast,
+  .toast.is-open {
+    translate: none;
+  }
+
+  .anim-mutation-progress {
+    animation: none;
+    opacity: 0.8;
+  }
+
+  .nav-marker,
+  .seg-marker,
+  .fold {
+    transition: none;
+  }
+
+  .app-nav.is-away {
+    translate: none;
+  }
+
+  :where(button, .tap):not(:disabled):active {
+    scale: none;
+  }
+}
+
+/* 인쇄에서는 모두 끈다 */
+@media print {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scale: none !important;
+  }
+}
+
+/* 숫자 열은 자릿수가 흔들리지 않게 고정폭 숫자로 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 손가락으로 누르는 기기(휴대폰·태블릿)에서는 누르는 칸을 최소 44px 로.
+ * 그보다 작으면 옆 버튼을 잘못 누르기 쉽다 (숨김 옆 삭제 같은).
+ * 명세표·견적서 양식 안은 인쇄 모양을 지켜야 하므로 뺀다.
+ * 버튼처럼 생긴 링크에는 .tap 을 붙인다.
+ */
+@media (pointer: coarse) {
+  :where(button, select, input:not([type='checkbox'], [type='radio']), .tap):not(.statement-sheet *) {
+    min-height: 44px;
+  }
+}
+
+/*
+ * PC 에서도 버튼·입력칸·목록 칸은 44px 한 높이로 맞춘다 (달 이동 버튼과 같은 높이).
+ * 예전에는 32~44px 로 화면마다 들쭉날쭉해 한 줄에 놓인 칸들의 위아래가 어긋났다.
+ * 표 안(셀 입력·수정/삭제)은 줄 높이를 지키려고 뺀다.
+ */
+:where(button, select, input:not([type='checkbox'], [type='radio'], [type='file']), .tap):not(.statement-sheet *, table *) {
+  min-height: 44px;
+}
+
+/*
+ * 입력칸의 예시 글자. 기본값(글자색의 절반)은 진해서 이미 적어 넣은 값처럼 보였다 (사용자 요청 2026-10-03, 10-04 에 한 단계 더 옅게 slate-300).
+ * 예시는 읽어야 하는 내용이 아니라서 「옅은 글씨 금지」 규칙의 예외로 둔다.
+ */
+::placeholder {
+  color: var(--color-slate-300);
+  opacity: 1;
+}
+
+/*
+ * 고르는 칸(select)의 아래 꺾쇠 — 브라우저 기본 화살표는 오른쪽 테두리에 거의 붙어 있어
+ * 직접 그려 오른쪽에서 14px 띄운다. 글자가 꺾쇠에 닿지 않게 오른쪽 여백 36px.
+ * 표 안(셀 입력)·명세표·견적서 양식은 자기 모양이 있어 뺀다.
+ */
+select:not(.statement-sheet *, table *, .sheet-select) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-size: 12px 8px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+/* 장부 표의 셀 입력 — 표처럼 보이되 클릭하면 바로 고칠 수 있게 */
+.cell-input {
+  @apply w-full min-w-0 bg-transparent px-2 py-1.5 outline-none;
+  @apply focus:bg-sky-50 focus:ring-2 focus:ring-sky-400 focus:ring-inset;
+}
+
+/*
+ * 자동완성 목록(datalist)이 붙은 칸은 크롬이 오른쪽에 화살표 자리(약 20px)를 늘 비워 둔다.
+ * 좁은 표 칸에서는 그 자리 때문에 1,400,000 이 「1,400,00」으로 잘렸다.
+ * 화살표만 숨긴다. 글자를 치면 목록은 그대로 뜬다.
+ */
+.cell-input::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+/* iOS Safari에서 input[type="date"]가 부모 그리드/플렉스 셀 너비를 뚫고 인접 칸과 겹치는 버그 방지 */
+input[type='date'],
+input[type='time'] {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* iOS Safari에서 date input의 텍스트가 줄바꿈되거나 위젯 밖으로 튀어나가지 않도록 */
+input[type='date']::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.4em;
+}
+
+/* ── 거래명세표 A4 인쇄 ─────────────────────────────────────────────── */
+.statement-sheet {
+  width: 210mm;
+  min-height: 297mm;
+}
+
+/*
+ * 좁은 화면에서는 A4(210mm ≈ 794px)가 그대로는 들어가지 않는다.
+ * 화면에서만 화면 폭에 맞게 축소해 문서 전체가 한눈에 보이게 하고, 인쇄에는 손대지 않는다.
+ * (transform 과 달리 zoom 은 주변 여백까지 함께 줄어들어 빈 공간이 남지 않는다)
+ */
+@media screen and (max-width: 1023px) {
+  /* 배율은 main.tsx 가 화면 폭에서 계산해 넣는다 (양옆 여백 16px 을 뺀 폭 ÷ 210mm). 못 넣었으면 가장 좁은 휴대폰 기준 */
+  .statement-sheet {
+    zoom: var(--sheet-zoom, 0.4);
+  }
+}
+
+/*
+ * PDF 를 뜨는 동안(src/lib/pdf.ts)만 축소를 끈다. 줄인 채로 그림을 뜨면 글자 폭을 잘못 재어
+ * 띄어쓰기가 사라지고 글자가 겹쳤다 (휴대폰에서 만든 PDF).
+ */
+.pdf-capture .statement-sheet {
+  zoom: 1 !important;
+}
+
+/*
+ * 명세표 안의 편집 칸. 평소에는 그냥 글자로 보이다가 마우스를 올리거나
+ * 커서를 넣었을 때만 고칠 수 있다는 티가 나게 한다 (엑셀 셀과 같은 느낌).
+ */
+.sheet-cell:hover {
+  background: color-mix(in srgb, #0284c7 6%, transparent);
+}
+
+.sheet-cell:focus {
+  background: color-mix(in srgb, #0284c7 12%, transparent);
+  box-shadow: inset 0 0 0 2px #0284c7;
+}
+
+/* 목록에서 고르는 칸은 고를 수 있다는 표시로 작은 삼각형을 붙인다 */
+.sheet-select {
+  background-image: linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+    linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+  background-position:
+    right 6px center,
+    right 2px center;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+  padding-right: 14px;
+}
+
+@media print {
+  .sheet-cell:hover,
+  .sheet-cell:focus {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  /* 인쇄에는 명세표만 남기고 화면용 요소는 전부 뺀다 */
+  html,
+  body {
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+
+  /*
+   * 명세표를 감싼 요소의 여백·스크롤이 한 톨이라도 남으면 297mm 를 넘겨
+   * 빈 두 번째 장이 딸려 나온다. 조상 요소의 여백을 전부 걷어낸다.
+   */
+  .statement-print-area {
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .statement-sheet {
+    /*
+     * 화면에서는 min-height:297mm 로 A4 모양을 보여주지만, 인쇄에서는 그 고정 높이를
+     * 없앤다. 297mm 박스는 소수점 반올림으로 297.1mm 가 되기 쉽고 그 0.1mm 가
+     * 통째로 빈 두 번째 장을 만든다. 내용 높이는 약 280mm 로 A4 안에 넉넉히 들어간다.
+     */
+    height: auto;
+    min-height: 0;
+    margin: 0 !important;
+    box-shadow: none;
+    break-after: page;
+  }
+
+  .statement-sheet:last-of-type {
+    break-after: auto;
+  }
+
+  /* 표 테두리와 머리글 음영이 인쇄에서 빠지지 않도록 */
+  .statement-sheet * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* 시간 입력의 시계 아이콘은 좁은 열에서 자리만 잡아먹는다 */
+.cell-input[type='time']::-webkit-calendar-picker-indicator,
+.cell-input[type='date']::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.cell-input[type='time'],
+.cell-input[type='date'] {
+  @apply px-1;
+}

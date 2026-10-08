@@ -1,0 +1,32 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.local
+tsconfig.tsbuildinfo
+
+# 백업 파일을 여기에 받아두더라도 저장소에는 넣지 않는다
+jangbu-*.sql
+backup*.sql
+
+# 엑셀 임시 잠금 파일
+~$*.xlsx
+
+# wrangler types 로 자동 생성
+worker-configuration.d.ts
+
+# 원본자료 — 쓰던 엑셀·명세표 견본 PDF·도장 원본. 안에 도장 그림이 들어 있어
+# 서류 위조에 쓰일 수 있으므로 저장소에 올리지 않고 이 컴퓨터에만 둔다.
+# (엑셀 내용은 이미 migrations/0002_seed.sql 로 옮겼고, 보정한 도장은 실서버 DB company_stamps 에 있다)
+원본자료/
+
+# e2e 점검 결과물 (장부 내용이 찍힌 스크린샷·PDF)
+e2e/out/
+__pycache__/
+
+# AI 도구 간 인수인계 메모
+HANDOFF.md
+
+# Claude 가 이 컴퓨터에서 쓰는 설정 (미리보기 실행 설정, 받아 온 스킬과 그 받은 곳 기록)
+.claude/
+skills-lock.json

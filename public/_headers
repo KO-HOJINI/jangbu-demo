@@ -1,0 +1,24 @@
+# 화면 파일(HTML·JS·CSS·글꼴)에 붙는 보안 헤더 — Cloudflare 가 정적 파일을 내보낼 때 붙인다.
+# API 응답에는 worker/index.ts 의 secureHeaders 가 붙인다.
+#
+#  Content-Security-Policy  이 사이트 파일만 실행·표시한다. 외부 스크립트가 끼어들 수 없다.
+#                           img 의 blob:/data: 는 엑셀 내보내기·도장 미리보기 때문, frame-ancestors 는 남의 사이트에 몰래 띄우기 막기
+#                           worker-src 의 blob: 은 아이폰 사진(HEIC)을 푸는 도구가 워커를 그렇게 띄워서 (src/lib/imageShrink.ts)
+#  X-Frame-Options          옛 브라우저용 frame-ancestors
+#  X-Content-Type-Options   파일 종류를 멋대로 짐작하지 않게
+#  Referrer-Policy          다른 사이트로 나갈 때 우리 주소를 넘기지 않게
+#  Permissions-Policy       마이크·위치 등은 쓰지 않는다. 카메라는 이 사이트에서만 (PC 에서 장부 사진 찍기)
+#  Strict-Transport-Security  항상 https 로만
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin
+
+# 이름에 내용 지문이 붙는 파일(JS·CSS·글꼴)은 내용이 바뀌면 이름도 바뀐다. 한 번 받으면 다시 묻지 않게 한다.
+# 이 줄이 없으면 「매번 서버에 확인」(max-age=0)이라, 화면을 열 때마다 파일 수(화면 조각 + 글꼴 조각 수십 개)만큼 확인 요청이 갔다.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "jangbu",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+
+  // Vite 빌드 결과(dist/client)를 정적 자산으로 서빙하고,
+  // 매칭되는 파일이 없으면 index.html 로 넘겨 SPA 라우팅이 동작하게 한다.
+  "assets": {
+    "not_found_handling": "single-page-application"
+  },
+
+  // 바인딩은 이 하나만 있으면 된다. worker 코드는 env.DB 로만 접근한다.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jangbu-db",
+      "database_id": "wrangler d1 create 로 만든 id 를 여기에",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // 백업 보관함. D1 과 다른 곳에 두어야 의미가 있어서 KV 를 쓴다.
+  "kv_namespaces": [
+    {
+      "binding": "BACKUPS",
+      "id": "wrangler kv namespace create 로 만든 id 를 여기에"
+    }
+  ],
+
+  // 수기 장부 사진 읽기 (Cloudflare Workers AI — 무료 한도 안에서 쓴다)
+  "ai": {
+    "binding": "AI"
+  },
+
+  // cron 은 UTC 기준이다.
+  //   0 18 * * *  → 매일 03:00 (한국시간) 자동 백업
+  //   0 0 * * *   → 매일 09:00 (한국시간) 발행일 지난 미발행 알림 (휴대폰·PC)
+  "triggers": {
+    "crons": ["0 18 * * *", "0 0 * * *"]
+  },
+
+  // 웹 푸시(알림) 보내는 곳 증명(VAPID). 직접 만든 열쇠 한 쌍의 공개키를 적는다.
+  // 짝이 되는 비밀키는 `wrangler secret put VAPID_PRIVATE_JWK` 로만 넣는다 (저장소에 없다).
+  // 로컬 개발은 .dev.vars 의 다른 열쇠 한 쌍을 쓴다.
+  "vars": {
+    "VAPID_PUBLIC_KEY": "여기에 본인 VAPID 공개키",
+    "VAPID_SUBJECT": "https://example.workers.dev"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}

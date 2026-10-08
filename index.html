@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>장부 · 거래명세표</title>
+    <!-- 가족끼리 쓰는 비공개 장부라 검색엔진에 나오지 않게 한다 -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="장부 · 거래명세표 관리 (비공개)" />
+    <!-- 탭에서 알아보기 쉽게 장부책 아이콘(남색 바탕, 노란 책등). 그림 파일이라 컴퓨터마다 똑같이 보인다 -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
+    <!-- 휴대폰 홈 화면에 추가했을 때 아이콘 -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!--
+      홈 화면에 추가하면 주소창 없는 앱처럼 열린다. 아이폰은 이렇게 홈 화면에서 연 경우에만
+      알림(발행일 지난 미발행)을 받을 수 있다.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="장부" />
+    <meta name="theme-color" content="#ffffff" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

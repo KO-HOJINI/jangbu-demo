@@ -1,0 +1,10 @@
+# 이 파일을 .dev.vars 로 복사해서 쓴다 (.dev.vars 는 저장소에 올리지 않는다).
+# 비워 두면 해당 기능(알림·메일·사진 읽기)만 동작하지 않고, 나머지 화면은 그대로 쓸 수 있다.
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_JWK=
+NAVER_SMTP_USER=
+NAVER_SMTP_PASSWORD=
+SMTP_HOST=
+SMTP_PORT=
+SMTP_SECURE=
+GEMINI_API_KEY=
